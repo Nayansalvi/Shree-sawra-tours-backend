@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1762681204383,
+    "packagePrice": 1800,
+    "numPersons": 1,
+    "carType": "small",
+    "total": 2300,
+    "date": "9/11/2025, 3:10:04 pm",
+    "createdAt": "2025-11-09T09:40:04.383Z"
+  },
+  {
+    "id": 1762704386687,
+    "packagePrice": 1200,
+    "numPersons": 1,
+    "carType": "small",
+    "total": 1700,
+    "date": "09/11/2025, 21:36:26",
+    "createdAt": "2025-11-09T16:06:26.687Z"
+  },
+  {
+    "id": 1762704464676,
+    "packagePrice": 2500,
+    "numPersons": 2,
+    "carType": "suv",
+    "total": 4000,
+    "date": "9/11/2025, 9:37:44 pm",
+    "createdAt": "2025-11-09T16:07:44.676Z"
+  }
+]
