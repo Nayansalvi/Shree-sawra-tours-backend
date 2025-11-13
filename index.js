@@ -152,9 +152,7 @@ app.delete("/api/bookings/:id", async (req, res) => {
 });
 
 // ---------- Export for Vercel ----------
-module.exports = (req, res) => {
-  res.send("Backend is working!");
-};
+module.exports = app;
 
 // ---------- Local Dev Mode ----------
 if (require.main === module) {
