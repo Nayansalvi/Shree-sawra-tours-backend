@@ -5,5 +5,25 @@
     "express": "^5.1.0",
     "mongodb": "^7.0.0",
     "mongoose": "^8.19.3"
-  }
+  },
+  "name": "shree-sawra-tours-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NayanSalvi/Shree-sawra-tours-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NayanSalvi/Shree-sawra-tours-backend/issues"
+  },
+  "homepage": "https://github.com/NayanSalvi/Shree-sawra-tours-backend#readme"
 }
