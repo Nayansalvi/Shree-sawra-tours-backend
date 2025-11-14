@@ -5,7 +5,6 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-
 const app = express();
 
 // ---------- Middleware ----------
@@ -13,9 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // ---------- MongoDB Connection ----------
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  "mongodb+srv://nayansalvi001_db_user:nayan123salvi@mywebsite.tulh7sb.mongodb.net/mydatabase?retryWrites=true&w=majority";
+const uri = "mongodb+srv://nayansalvi001_db_user:nayan123salvi@mywebsite.tulh7sb.mongodb.net/?appName=MyWebsite";
 
 let isConnected = false;
 
@@ -23,18 +20,20 @@ async function connectDB() {
   if (isConnected) return;
 
   try {
-    const db = await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-    });
-    isConnected = db.connection.readyState === 1;
-    console.log("✅ Connected to MongoDB");
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err.message);
+    const conn = await mongoose.connect(
+      "YOUR_MONGO_URI_HERE", 
+      {
+        dbName: "ShreeSawraTours",
+      }
+    );
+
+    isConnected = true;
+    console.log("✅ Mongoose Connected:", conn.connection.host);
+  } catch (error) {
+    console.log("❌ Mongoose Connection Error:", error);
   }
 }
-
+connectDB()
 // ---------- Booking Schema ----------
 const bookingSchema = new mongoose.Schema({
   packagePrice: { type: Number, required: true },
