@@ -1,39 +1,62 @@
-// ================================
-// 📦 Shree Sawra Tours Backend
-// ================================
+// index.js
+// Shree Sawra Tours - Express + Mongoose (Vercel-friendly)
 
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+
 const app = express();
 
 // ---------- Middleware ----------
-app.use(cors());
-app.use(express.json());
+app.use(cors({ origin: true })); // allow all origins; tighten later if needed
+app.use(express.json()); // parse JSON bodies
 
-// ---------- MongoDB Connection ----------
-const uri = "mongodb+srv://nayansalvi001_db_user:nayan123salvi@mywebsite.tulh7sb.mongodb.net/?appName=MyWebsite";
+// ---------- Mongoose / MongoDB connection (serverless-safe) ----------
+/**
+ * This implementation caches the mongoose connection across invocations
+ * (works in serverless environments like Vercel).
+ *
+ * IMPORTANT: Set MONGO_URI in Vercel environment variables.
+ */
 
-let isConnected = false;
+const MONGO_URI = process.env.MONGO_URI || "";
+
+if (!MONGO_URI) {
+  console.warn("⚠️ MONGO_URI not provided. Set the MONGO_URI environment variable.");
+}
+
+const mongooseOptions = {
+  // optional settings you can tune
+  // useNewUrlParser: true, useUnifiedTopology: true // no longer required explicitly in latest mongoose
+};
 
 async function connectDB() {
-  if (isConnected) return;
+  // In local dev and Vercel serverless, reuse global cached connection if exist
+  if (global._mongo && global._mongo.conn) {
+    return global._mongo.conn;
+  }
+
+  if (!global._mongo) {
+    global._mongo = { conn: null, promise: null };
+  }
+
+  if (!global._mongo.promise) {
+    global._mongo.promise = mongoose.connect(MONGO_URI, mongooseOptions).then((mongooseInstance) => {
+      return mongooseInstance;
+    });
+  }
 
   try {
-    const conn = await mongoose.connect(
-      "YOUR_MONGO_URI_HERE", 
-      {
-        dbName: "ShreeSawraTours",
-      }
-    );
-
-    isConnected = true;
-    console.log("✅ Mongoose Connected:", conn.connection.host);
-  } catch (error) {
-    console.log("❌ Mongoose Connection Error:", error);
+    global._mongo.conn = await global._mongo.promise;
+    console.log("✅ Mongoose connected:", global._mongo.conn.connection.host || "connected");
+    return global._mongo.conn;
+  } catch (err) {
+    global._mongo.promise = null;
+    console.error("❌ Mongoose connection error:", err);
+    throw err;
   }
 }
-connectDB()
+
 // ---------- Booking Schema ----------
 const bookingSchema = new mongoose.Schema({
   packagePrice: { type: Number, required: true },
@@ -44,6 +67,7 @@ const bookingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// Avoid model overwrite issues in serverless
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 // ---------- Routes ----------
@@ -67,14 +91,21 @@ app.post("/api/book", async (req, res) => {
   try {
     await connectDB();
 
-    const { packagePrice, numPersons, carType, total, date } = req.body;
-
-    console.log("📦 Incoming booking:", req.body);
-
-    if (!packagePrice || !numPersons || !carType || !total) {
+    // If body is missing, return 400
+    if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message: "Empty request body. Please send JSON with Content-Type: application/json",
+      });
+    }
+
+    const { packagePrice, numPersons, carType, total, date } = req.body;
+
+    // Basic validation
+    if (typeof packagePrice !== "number" || typeof numPersons !== "number" || !carType || typeof total !== "number") {
+      return res.status(400).json({
+        success: false,
+        message: "Missing or invalid fields. Required: packagePrice(Number), numPersons(Number), carType(String), total(Number)",
       });
     }
 
@@ -87,7 +118,6 @@ app.post("/api/book", async (req, res) => {
     });
 
     const savedBooking = await booking.save();
-    console.log("✅ New booking saved:", savedBooking._id);
 
     res.status(201).json({
       success: true,
@@ -95,7 +125,7 @@ app.post("/api/book", async (req, res) => {
       booking: savedBooking,
     });
   } catch (err) {
-    console.error("❌ Booking save error:", err.message);
+    console.error("❌ Booking save error:", err);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -111,8 +141,8 @@ app.get("/api/bookings", async (req, res) => {
     const bookings = await Booking.find().sort({ createdAt: -1 });
     res.json({ success: true, count: bookings.length, bookings });
   } catch (err) {
-    console.error("❌ Error getting bookings:", err.message);
-    res.status(500).json({ success: false, message: "Failed to retrieve bookings" });
+    console.error("❌ Error getting bookings:", err);
+    res.status(500).json({ success: false, message: "Failed to retrieve bookings", error: err.message });
   }
 });
 
@@ -128,8 +158,8 @@ app.get("/api/bookings/:id", async (req, res) => {
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
     res.json({ success: true, booking });
   } catch (err) {
-    console.error("❌ Error getting booking by ID:", err.message);
-    res.status(500).json({ success: false, message: "Failed to retrieve booking" });
+    console.error("❌ Error getting booking by ID:", err);
+    res.status(500).json({ success: false, message: "Failed to retrieve booking", error: err.message });
   }
 });
 
@@ -145,16 +175,23 @@ app.delete("/api/bookings/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ success: false, message: "Booking not found" });
     res.json({ success: true, message: "Booking deleted successfully" });
   } catch (err) {
-    console.error("❌ Error deleting booking:", err.message);
-    res.status(500).json({ success: false, message: "Failed to delete booking" });
+    console.error("❌ Error deleting booking:", err);
+    res.status(500).json({ success: false, message: "Failed to delete booking", error: err.message });
   }
 });
 
-// ---------- Export for Vercel ----------
+// Export the app for Vercel
 module.exports = app;
 
-// ---------- Local Dev Mode ----------
+// Local dev: start server if run directly (not used on Vercel)
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+  // Ensure DB connected before starting local server
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+    })
+    .catch((err) => {
+      console.error("Failed to start server due to DB error:", err);
+    });
 }
